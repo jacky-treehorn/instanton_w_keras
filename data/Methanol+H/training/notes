@@ -1,0 +1,24 @@
+Training (and test) set for H+methanol, prepared by JK in April 2017.
+
+Preparation: The structures have been taken from April, with a few added ones
+in the minimum regions. All structures with distances < 1.D-2 to neighbors
+were deleted (redundant).  We now have 70 structures in the training set and
+18 structures in the validation/test set.
+
+Energetic data: Molpro, UCCSD(T)-F12a/VTZ-F12 with an energy threshold of
+1.D-10. Gradients and Hessians with finite differences of energies with a 4th
+order scheme run in dl-find (eonly=6) with elongations along all vibrations
+and rotational eigenvectors, delta=0.02. Molpro-runs on Justus in
+~st_ac109360/sync/cases/H+meth/new_training_set_fixgrad.
+
+There are 6 points (one in the test set) in the product region below the
+energy of the reactants. The lowest-energy structure in the reactant valley
+used to be No 54 with energy -116.1094789426. It has two imaginary
+frequencies. After geometry optimization a structure (get_hess_min54) was
+obtained with only positive Hessian-eigenvalues, the file is hess_9_RSmin.txt.
+
+Among all 88 calculated Hessians, there are just two (structure 65, rather
+high energy of -116.108793580279 in the reactant valley and 9_RSmin) with zero
+negative eigenvalues, 44 with one, 32 with two 9 with three and one with four
+negative eigenvalues.
+
