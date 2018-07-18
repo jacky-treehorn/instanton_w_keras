@@ -9,5 +9,5 @@ network takes as input, the x,y,z coords of each atom in the molecule.
 gradients, once the keras team implements an L-BFGS optimizer things might
 look better (or I'll do it myself).
 
-The readin.f90 file can be recompiled using:
+The readin.f90 file MUST be compiled on your machine before executing neuralnetwor_sean_conv.py using:
 f2py --fcompiler=gnu95 --f90flags=-fopenmp --opt=-O2 -c -m readin readin.f90 -llapack -lblas -lgomp
