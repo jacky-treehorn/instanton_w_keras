@@ -168,7 +168,7 @@ subroutine pes_read(ncoord_,npoint,ntest,nat,remove_n_dims,dim_renorm,coords_int
   character(256)         :: line,fname
   integer                :: ios,ipoint,fname_len ! point refers to control point
   real(8), allocatable   :: xcoords(:),xgradient(:),xhessian(:,:) ! coords directly read in from file
-  real(8)                :: trans(3),rotmat(3,3),svar,ave_barycentre(3)
+  real(8)                :: trans(3),rotmat(3,3),svar,ave_barycentre(3),ave_ene
   real(8), allocatable   :: distmat(:,:)!,STORE_DMAT(:,:,:)
   real(8), allocatable   :: modes_tmp(:,:)
   integer                :: jpoint,ivar,ncoord,npointh,arr2(2),ni_store,nzero
@@ -197,7 +197,7 @@ subroutine pes_read(ncoord_,npoint,ntest,nat,remove_n_dims,dim_renorm,coords_int
   open(unit=53,file="validation.xyz")
   allocate(barycentre(3,npoint+ntest))
   barycentre=0.d0
-
+  ave_ene=0.d0
   do ipoint=1,npoint+ntest
     if(ipoint==npoint+1) then
       close(20)
@@ -226,6 +226,7 @@ subroutine pes_read(ncoord_,npoint,ntest,nat,remove_n_dims,dim_renorm,coords_int
 
     if(ipoint<=npoint) then
       read(30,*) refene(ipoint)
+      ave_ene=ave_ene+refene(ipoint)
     else
       read(30,*) testene(ipoint-npoint)
     end if
@@ -308,6 +309,9 @@ subroutine pes_read(ncoord_,npoint,ntest,nat,remove_n_dims,dim_renorm,coords_int
     enddo
     barycentre(:,ipoint)=barycentre(:,ipoint)/sum(refmass,dim=1)
   enddo
+  ave_ene=ave_ene/dble(npoint)
+  refene=refene-ave_ene
+  testene=testene-ave_ene
   allocate(avepos_allcoords(3*nat))
   avepos_allcoords=0.d0
   do ipoint=1,npoint+ntest
