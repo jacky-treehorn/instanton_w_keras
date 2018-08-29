@@ -1399,6 +1399,7 @@ pinv_tol,pinv_tol_back,coords_inverse,dim_renorm,xfreqs_store,tol_type,refmass)
   integer, intent(out) :: radii_omit(3*nat+1)
 !  integer redundant_dof
   real(8), allocatable :: x_ia(:,:),g_ia(:,:),h_ia(:,:,:)
+  integer jj
 
 !  if(barycentre_switch)then
 !    redundant_dof=nat*(nat-1)/2+nat
@@ -1424,6 +1425,12 @@ pinv_tol,pinv_tol_back,coords_inverse,dim_renorm,xfreqs_store,tol_type,refmass)
   deallocate(g_ia)
   refhess=h_ia(:,:,1:ns)
   testhess=h_ia(:,:,ns+1:)
+  do jj=1,ns
+    write(90,*)refcoords(:,jj)
+  enddo
+  do jj=1,ntest
+    write(91,*)testcoords(:,jj)
+  enddo
   deallocate(h_ia)
 
 end subroutine interatomic_coord_conversion

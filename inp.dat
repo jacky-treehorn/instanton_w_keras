@@ -1,14 +1,14 @@
-  10.d-2,0.d-3         !lambda,alpha.
-  20000                !maxiter.
+  1.d-2,0.d-3         !lambda,alpha.
+  10000                !maxiter.
   2.3d-4,2.3d-4       !pinv_tol_forward,pinv_tol_backward, should not be too small. Mainly used in selecting which redundant coordinates to remove.
   F                   !dimension_reduce. If PCA is desired for the descriptors.
   1                   !Coord system: 0 (normal mode displacements), 1 (bonds), 2 (inverse bonds), 3 (bonds+angles+dihedrals), 4 (inverse bonds+angles+dihedrals). Default dimension is 3*N-6.
   0                   !Extra redundant coords (Ignored if coord system = 0 or 3).
-  1.d0                !maxstep in LBFGS.
+  10.d0                !maxstep in LBFGS.
   12                  !ignored if dimension_reduce=F, otherwise, # of dim to remove
   F                   !Mass weighting.
   F                   !Linopt. Won't work in Sean's code.
   F                   !Residue in internal coords. Only useful if Coord system=0.
   1.d0,1.d0,1.d0,0.d0 !Residual weights (energy,gradient,hessian,h_evals).
-  30,30,60            !Hidden layer nodes (nj,nk,np), if np=0 only a single, dual hidden layer neural network will be used.
+  30,35,60            !Hidden layer nodes (nj,nk,np), if np=0 only a single, dual hidden layer neural network will be used.
   3                   !Pseudoinverse tolerance type: 1 (smallest residual), 2 (L-curve method), 3 (pinv_tol, 3rd line of this file)

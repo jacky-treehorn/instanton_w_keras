@@ -14,6 +14,9 @@ import readin as rdin
 import numpy as np
 import scipy as sp
 import keras
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Dropout, Flatten, Conv1D, MaxPooling1D, AveragePooling1D, GlobalMaxPooling1D, GlobalAveragePooling1D, Lambda, BatchNormalization, ActivityRegularization
 from keras.layers.advanced_activations import LeakyReLU
@@ -21,6 +24,7 @@ from keras import backend as K
 from keras import optimizers, activations, initializers, regularizers, constraints
 from levers_and_switches import inp_reader,fortran_float,inp_converter
 from keras.engine.topology import Layer
+from keras.wrappers.scikit_learn import KerasRegressor
 import theano
 theano.config.exception_verbosity='high'
 import theano.tensor as T
@@ -128,16 +132,48 @@ KMAT_Q, DM2, pca_eigvectr, mu, variance, radii_omit] = rdin.pes_read(
   pinv_tol_back = pinv_tol_b,
   tol_type = pinv_type)
 
-batch_size = int(np.round(ntrain/1))
+batch_size = int(np.round(ntrain/3))
 
 (x_train, y_train), (x_test, y_test) = (refcoords, refene), (testcoords, testene)
+
+#np.savetxt('x_coords', x_test.T)
+#quit()
 ytrainmean = y_train.mean()
 ytrainstdv = y_train.std()
-#PCA
-y_train = y_train - ytrainmean
-y_train = y_train / ytrainstdv
-#y_test = y_test - ytrainmean
-#y_test = y_test / ytrainstdv
+xtrainmean = x_train.mean(axis=1)
+xtrainstdv = x_train.std(axis=1)
+
+##PCA
+#y_train = y_train - ytrainmean
+#y_train = y_train / ytrainstdv
+
+#scaler = StandardScaler()
+#scaler.fit(x_train.T)
+#X_sc_train = scaler.transform(x_train.T)
+#X_sc_test = scaler.transform(np.hstack((x_test, np.zeros((x_test.shape[0], x_train.shape[1]-x_test.shape[1])))).T)
+
+#x_train = X_sc_train.T
+#x_test = X_sc_test.T[:,:x_test.shape[1]]
+
+##pca = PCA(n_components=ncoord)
+##pca.fit(X_sc_train)
+##plt.plot(np.cumsum(pca.explained_variance_ratio_))
+##plt.xlabel('Number of components')
+##plt.ylabel('Cumulative explained variance')
+##plt.savefig('PCA.png')
+
+##pca = PCA(0.999)#PCA(n_components=4)
+##pca.fit(X_sc_train.T)
+##X_pca_train = pca.transform(X_sc_train.T)
+##X_pca_test = pca.transform(X_sc_test.T)
+##X_sc_test = X_sc_test[:,0:x_test.shape[1]]
+##X_pca_test = X_pca_test.T[:,0:x_test.shape[1]]
+##X_pca_train = X_pca_train.T
+##pca_std = np.std(X_pca_train)
+
+##x_train = X_pca_train
+##x_test = X_pca_test
+##ncoord = x_train.shape[0]
 
 if grads_hessians:
   y_train_gh = []
@@ -180,22 +216,23 @@ model.add(Flatten())
 model.add(Dense(layer_extent[0], activation = 'tanh', use_bias = True, bias_initializer = keras.initializers.RandomUniform(minval = -1, maxval = 1, seed = None)))
 model.add(Dense(layer_extent[1], activation = 'tanh', use_bias = True, bias_initializer = keras.initializers.RandomUniform(minval = -1, maxval = 1, seed = None)))
 model.add(Dense(num_classes, activation = 'linear', use_bias = True, bias_initializer = keras.initializers.Constant(value = ytrainmean)))
+print('Model 1 summary')
+model.summary()
 
 input_data = Input(shape=(ncoord, ))
-#x = Dropout(0.05)(input_data)
-x = Dense(layer_extent[0], activation = 'tanh', use_bias = True, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(ncoord), seed=None), bias_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5, seed=None), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(input_data)
-#x = keras.layers.ELU(alpha=1.0)(x)
-#x = Dropout(0.05)(x)
-x = Dense(layer_extent[1], activation = 'tanh', use_bias = True, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(layer_extent[0]), seed=None), bias_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5, seed=None), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(x)
-#x = keras.layers.ELU(alpha=1.0)(x)
-#x = Dropout(0.05)(x)
-energy = Dense(num_classes, activation = 'linear', use_bias = True, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(layer_extent[1]), seed=None), bias_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5, seed=None), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(x)
+x = keras.layers.AlphaDropout(0.8, noise_shape = None, seed = None)(input_data)
+##x = Dropout(0.9)(input_data)
+x = Dense(layer_extent[0], activation = 'tanh', use_bias = False, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(ncoord), seed=None), bias_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5, seed=None), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(x)
+##x = keras.layers.ELU(alpha=1.0)(x)
+x = keras.layers.GaussianNoise(1.)(x)
+x = Dense(layer_extent[1], activation = 'tanh', use_bias = False, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(layer_extent[0]), seed=None), bias_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5, seed=None), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(x)
+##x = keras.layers.ELU(alpha=1.0)(x)
+x = keras.layers.GaussianNoise(1.)(x)
+energy = Dense(num_classes, activation = 'linear', use_bias = True, kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.5/np.sqrt(layer_extent[1]), seed=None), bias_initializer = keras.initializers.Zeros(), kernel_regularizer = regularizers.l2(lambda_), bias_regularizer = regularizers.l2(lambda_))(x)
 model2 = Model(inputs = input_data, outputs = energy)
 energy_grad = dout_din(num_classes*ncoord, input_data)(energy)
 model3 = Model(inputs = input_data, outputs = [energy, energy_grad])
 
-print('Model 1 summary')
-model.summary()
 print('Model 2 summary')
 if(not grads_hessians):
   model2.summary()
@@ -207,19 +244,19 @@ if(cont == '1'):
   if(grads_hessians):
     print('model1 not implemented with PES gradients and Hessians yet.')
     quit()
-  x_train = x_train.reshape(ntrain, ncoord, 1)
-  x_test = x_test.reshape(ntest, ncoord, 1)
-  x_train = x_train.astype('float128')
-  x_test = x_test.astype('float128')
+  x_train = x_train.reshape(ntrain, ncoord, 1) # Reshape might be fucking things up
+  x_test = x_test.reshape(ntest, ncoord, 1) # Reshape might be fucking things up
+  x_train = x_train.astype('float64')
+  x_test = x_test.astype('float64')
   y_train = y_train.reshape(ntrain, 1)
   y_test = y_test.reshape(ntest, 1)
-  y_train = y_train.astype('float128')
-  y_test = y_test.astype('float128')
+  y_train = y_train.astype('float64')
+  y_test = y_test.astype('float64')
   print('x_train shape:', x_train.shape)
   print('y_train shape:', y_train.shape)
   if grads_hessians:
-    y_train_gh = y_train_gh.astype('float128')
-    y_test_gh = y_test_gh.astype('float128')
+    y_train_gh = y_train_gh.astype('float64')
+    y_test_gh = y_test_gh.astype('float64')
     print('y_train_gh shape:', y_train_gh.shape)
 
   model.compile(loss = keras.losses.mean_absolute_error, optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0001, amsgrad=False))#'Adadelta')
@@ -237,17 +274,17 @@ if(cont == '1'):
   model.summary()
   print('Prediction, Target, Abs error, ave abs error:', np.asarray(map(np.abs,results - y_test)).mean(),2626*np.asarray(map(np.abs,results - y_test)).mean(),'kJ/mol',27.21*np.asarray(map(np.abs,results - y_test)).mean(),'eV')
 elif(cont == '2'):
-  x_train = x_train.reshape(ntrain, ncoord)
-  x_test = x_test.reshape(ntest, ncoord)
-  x_train = x_train.astype('float128')
-  x_test = x_test.astype('float128')
-  y_train = y_train.astype('float128')
-  y_test = y_test.astype('float128')
+#  x_train = x_train.astype('float64')
+#  x_test = x_test.astype('float64')
+  x_train = x_train.T
+  x_test = x_test.T
+#  y_train = y_train.astype('float64')
+#  y_test = y_test.astype('float64')
   print('x_train shape:', x_train.shape)
   print('y_train shape:', y_train.shape)
   if grads_hessians:
-    y_train_gh = y_train_gh.astype('float128')
-    y_test_gh = y_test_gh.astype('float128')
+#    y_train_gh = y_train_gh.astype('float64')
+#    y_test_gh = y_test_gh.astype('float64')
     print('y_train_gh shape:', y_train_gh.shape)
 
 
@@ -277,26 +314,36 @@ elif(cont == '2'):
     results = model3.predict(x_test, verbose = 0)
   else:
 
+
+#    np.savetxt('x_coords', x_test)
+#    np.savetxt('x_refs', x_train)
+#    quit()
     model2.compile(loss = keras.losses.mean_absolute_error,
-                   optimizer = 'SGD')
+                  optimizer = 'adam')#keras.optimizers.Adam(lr=0.05, beta_1=0.99, beta_2=0.999, epsilon=1E-8, decay=0.01, amsgrad=False, clipnorm = 1.0))#
+
+#    for step in range(maxiter):
+#        cost = model2.train_on_batch(x_train, y_train)
+#        if step % 100 == 0:
+#            print('train cost: ', cost)
+
     model2.fit(x_train, y_train,
               batch_size = batch_size,
               epochs = maxiter,
               verbose = 2,
-              validation_split = 0.33,
-#              validation_data = (x_test, y_test),
+#              validation_split = 0.33,
+              validation_data = (x_test, y_test),
               shuffle = True,
 #              steps_per_epoch = batch_size,
 #              validation_steps = batch_size
               callbacks = [keras.callbacks.TerminateOnNaN(), keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.95, patience=50, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0), keras.callbacks.ModelCheckpoint('weights.best.hdf5', monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)]
               )
+
     model2 = keras.models.load_model('weights.best.hdf5')
     results = model2.predict(x_test)
     results_train = model2.predict(x_train)
-  ytrainstdv_mod = ytrainstdv
-  print('Energies result\n', (results.T[0])*ytrainstdv_mod+ytrainmean, type(results.T[0]))
-  print('Energies test\n', y_test, type(y_test))
-  print('Prediction, Target, Abs error, ave abs error, training std dev:\n', np.asarray(map(np.abs,(results.T[0]*ytrainstdv_mod+ytrainmean - y_test))).mean(), 2626*np.asarray(map(np.abs,(results.T[0]*ytrainstdv_mod+ytrainmean - y_test))).mean(), 'kJ/mol', 27.21*np.asarray(map(np.abs,(results.T[0]*ytrainstdv_mod+ytrainmean - y_test))).mean(), 'eV', ytrainstdv)
+  print('Energies result\n', results.T[0])
+  print('Energies test\n', y_test)
+  print('Prediction, Target, Abs error, ave abs error, training std dev:\n', np.asarray(map(np.abs,(results.T[0] - y_test))).mean(), 2626*np.asarray(map(np.abs,(results.T[0] - y_test))).mean(), 'kJ/mol', 27.21*np.asarray(map(np.abs,(results.T[0] - y_test))).mean(), 'eV', ytrainstdv)
   if grads_hessians:
     i = 1
     while i <= ntest:
